@@ -1,0 +1,51 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Setup ORT CLI"
+description: "Setup the ORT CLI for use in a GitHub workflow."
+
+inputs:
+  ort-version:
+    description: "The version of ORT to set up. Defaults to 'latest'."
+    required: false
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Download ORT CLI"
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ORT_VERSION: ${{ inputs.ort-version }}
+    run: |
+      if [ -z "$ORT_VERSION" -o "$ORT_VERSION" = "latest" ]; then
+        ORT_VERSION=$(gh release view -R oss-review-toolkit/ort --json tagName --jq .tagName)
+      fi
+
+      ORT_HOME=$RUNNER_TOOL_CACHE/ort/$ORT_VERSION
+
+      if [ ! -d "$ORT_HOME" ]; then
+        echo "Setting up ORT version $ORT_VERSION in '$ORT_HOME'..."
+
+        # https://cli.github.com/manual/gh_release_download
+        gh release download $ORT_VERSION -R oss-review-toolkit/ort -p ort-$ORT_VERSION.tgz
+
+        mkdir -p "$ORT_HOME"
+        tar -xzf ort-$ORT_VERSION.tgz -C "$ORT_HOME" --strip-components=1
+
+        echo "$ORT_HOME/bin" >> "$GITHUB_PATH"
+      else
+        echo "ORT version $ORT_VERSION is already set up in '$ORT_HOME'."
+      fi
+  - name: "Setup Java"
+    uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+    with:
+      distribution: "temurin"
+      java-version: "21"
+  - name: "Check ORT Requirements"
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      FORCE_COLOR: true
+    continue-on-error: true
+    run: ort requirements
