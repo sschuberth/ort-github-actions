@@ -6,6 +6,8 @@ runs:
   # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
   using: "composite"
   steps:
+  - name: "Setup Scanner Requirements"
+    uses: sschuberth/ort-github-actions/cli/setup-scanners@main
   - name: "Setup VCS Requirements"
     uses: sschuberth/ort-github-actions/cli/setup-vcs@main
   - name: "Run ORT Requirements"
