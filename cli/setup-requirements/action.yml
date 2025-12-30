@@ -1,0 +1,12 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Setup All Requirements"
+description: "Setup all tools required / supported by ORT."
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Setup Version Control Systems"
+    uses: sschuberth/ort-github-actions/cli/setup-vcs@main
+  - name: "Check ORT Requirements"
+    uses: sschuberth/ort-github-actions/cli/requirements@main

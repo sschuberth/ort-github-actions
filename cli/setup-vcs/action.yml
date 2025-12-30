@@ -1,0 +1,15 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Setup Version Control Systems"
+description: "Setup all Version Control Systems required / supported by ORT."
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Setup VCS Requirements"
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    run: |
+      sudo apt-get update
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y repo
+      repo --version
