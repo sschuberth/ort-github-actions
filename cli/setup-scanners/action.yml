@@ -1,0 +1,73 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Setup Scanners"
+description: "Setup all scanners required / supported by ORT."
+
+inputs:
+  askalono-version:
+    description: "The version of Askalono to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  licensee-version:
+    description: "The version of Licensee to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  scancode-version:
+    description: "The version of ScanCode to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Setup Askalono"
+    if: ${{ inputs.askalono-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ASKALONO_VERSION: ${{ inputs.askalono-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$ASKALONO_VERSION" -o "$ASKALONO_VERSION" = "latest" ]; then
+        ASKALONO_VERSION=$(gh release view -R jpeddicord/askalono --json tagName --jq .tagName)
+      fi
+
+      ASKALONO_HOME=$RUNNER_TOOL_CACHE/askalono/$ASKALONO_VERSION
+
+      if [ ! -d "$ASKALONO_HOME" ]; then
+        echo "Setting up Askalono version $ASKALONO_VERSION in '$ASKALONO_HOME'..."
+
+        # https://cli.github.com/manual/gh_release_download
+        gh release download $ASKALONO_VERSION -R jpeddicord/askalono -p askalono-Linux.zip
+
+        mkdir -p "$ASKALONO_HOME"
+        unzip askalono-Linux.zip -d "$ASKALONO_HOME"
+
+        echo "$ASKALONO_HOME" >> "$GITHUB_PATH"
+      else
+        echo "Askalono version $ASKALONO_VERSION is already set up in '$ASKALONO_HOME'."
+      fi
+  - name: "Setup Licensee"
+    if: ${{ inputs.licensee-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      LICENSEE_VERSION: ${{ inputs.licensee-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$LICENSEE_VERSION" -o "$LICENSEE_VERSION" = "latest" ]; then
+        sudo gem install licensee
+      else
+        sudo gem install licensee:$LICENSEE_VERSION
+      fi
+  - name: "Setup ScanCode"
+    if: ${{ inputs.scancode-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      SCANCODE_VERSION: ${{ inputs.scancode-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$SCANCODE_VERSION" -o "$SCANCODE_VERSION" = "latest" ]; then
+        pipx install scancode-toolkit
+      else
+        pipx install scancode-toolkit==$SCANCODE_VERSION
+      fi
