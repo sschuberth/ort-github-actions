@@ -1,0 +1,14 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Check ORT Requirements"
+description: "Run ORT's 'requirements' sub-command to check for required tools to be installed."
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Check ORT Requirements"
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      FORCE_COLOR: true
+    run: ort requirements

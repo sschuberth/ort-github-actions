@@ -43,9 +43,5 @@ runs:
       distribution: "temurin"
       java-version: "21"
   - name: "Check ORT Requirements"
-    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
-    shell: "bash"
-    env:
-      FORCE_COLOR: true
+    uses: sschuberth/ort-github-actions/cli/requirements@main
     continue-on-error: true
-    run: ort requirements
