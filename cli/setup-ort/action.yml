@@ -15,28 +15,31 @@ runs:
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
     shell: "bash"
     env:
-      GH_TOKEN: ${{ github.token }}
       ORT_VERSION: ${{ inputs.ort-version }}
     run: |
       if [ -z "$ORT_VERSION" -o "$ORT_VERSION" = "latest" ]; then
-        ORT_VERSION=$(gh release view -R oss-review-toolkit/ort --json tagName --jq .tagName)
+        ORT_VERSION=$(curl -sI https://github.com/oss-review-toolkit/ort/releases/latest \
+          | grep -i "location:" | sed "s,.*/tag/,," | tr -d "\r\n")
+      fi
+
+      if [ -z "$ORT_VERSION" ]; then
+        echo "::error::The ORT version must not be empty."
+        exit 1
       fi
 
       ORT_HOME=$RUNNER_TOOL_CACHE/ort/$ORT_VERSION
 
       if [ ! -d "$ORT_HOME" ]; then
-        echo "Setting up ORT version $ORT_VERSION in '$ORT_HOME'..."
-
-        # https://cli.github.com/manual/gh_release_download
-        gh release download $ORT_VERSION -R oss-review-toolkit/ort -p ort-$ORT_VERSION.tgz
-
         mkdir -p "$ORT_HOME"
-        tar -xzf ort-$ORT_VERSION.tgz -C "$ORT_HOME" --strip-components=1
+        echo "::notice::Setting up ORT version $ORT_VERSION in '$ORT_HOME'..."
 
-        echo "$ORT_HOME/bin" >> "$GITHUB_PATH"
+        curl -sL https://github.com/oss-review-toolkit/ort/releases/download/$ORT_VERSION/ort-$ORT_VERSION.tgz \
+          | tar -xz -C "$ORT_HOME" --strip-components=1
       else
-        echo "ORT version $ORT_VERSION is already set up in '$ORT_HOME'."
+        echo "::notice::ORT version $ORT_VERSION was already set up in '$ORT_HOME'."
       fi
+
+      echo "$ORT_HOME/bin" >> "$GITHUB_PATH"
   - name: "Setup Java"
     uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
     with:

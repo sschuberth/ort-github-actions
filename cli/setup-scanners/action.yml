@@ -22,29 +22,33 @@ runs:
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
     shell: "bash"
     env:
-      GH_TOKEN: ${{ github.token }}
       ASKALONO_VERSION: ${{ inputs.askalono-version }}
     continue-on-error: true
     run: |
       if [ -z "$ASKALONO_VERSION" -o "$ASKALONO_VERSION" = "latest" ]; then
-        ASKALONO_VERSION=$(gh release view -R jpeddicord/askalono --json tagName --jq .tagName)
+        ASKALONO_VERSION=$(curl -sI https://github.com/jpeddicord/askalono/releases/latest \
+          | grep -i "location:" | sed "s,.*/tag/,," | tr -d "\r\n")
+      fi
+
+      if [ -z "$ASKALONO_VERSION" ]; then
+        echo "::error::The Askalono version must not be empty."
+        exit 1
       fi
 
       ASKALONO_HOME=$RUNNER_TOOL_CACHE/askalono/$ASKALONO_VERSION
 
       if [ ! -d "$ASKALONO_HOME" ]; then
-        echo "Setting up Askalono version $ASKALONO_VERSION in '$ASKALONO_HOME'..."
-
-        # https://cli.github.com/manual/gh_release_download
-        gh release download $ASKALONO_VERSION -R jpeddicord/askalono -p askalono-Linux.zip
-
         mkdir -p "$ASKALONO_HOME"
-        unzip askalono-Linux.zip -d "$ASKALONO_HOME"
+        echo "::notice::Setting up Askalono version $ASKALONO_VERSION in '$ASKALONO_HOME'..."
 
-        echo "$ASKALONO_HOME" >> "$GITHUB_PATH"
+        curl -sLO https://github.com/jpeddicord/askalono/releases/download/$ASKALONO_VERSION/askalono-Linux.zip
+        unzip askalono-Linux.zip -d "$ASKALONO_HOME"
+        rm askalono-Linux.zip
       else
-        echo "Askalono version $ASKALONO_VERSION is already set up in '$ASKALONO_HOME'."
+        echo "::notice::Askalono version $ASKALONO_VERSION was already set up in '$ASKALONO_HOME'."
       fi
+
+      echo "$ASKALONO_HOME" >> "$GITHUB_PATH"
   - name: "Setup Licensee"
     if: ${{ inputs.licensee-version != 'none' }}
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
