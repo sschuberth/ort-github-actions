@@ -1,0 +1,201 @@
+# https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax
+name: "Setup Package Managers"
+description: "Setup all package managers required / supported by ORT."
+
+inputs:
+  bower-version:
+    description: "The version of Bower to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  buildozer-version:
+    description: "The version of Buildozer to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  cocopods-version:
+    description: "The version of CocoPods to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  conan-version:
+    description: "The version of Conan to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  gleam-version:
+    description: "The version of Gleam to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  pipenv-version:
+    description: "The version of Pipenv to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  pnpm-version:
+    description: "The version of PNPM to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  poetry-version:
+    description: "The version of Poetry to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  python-inspector-version:
+    description: "The version of python-inspector to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+  sbt-version:
+    description: "The version of SBT to set up. Defaults to 'latest'. Use 'none' to disable."
+    required: false
+
+runs:
+  # https://docs.github.com/en/actions/concepts/workflows-and-actions/custom-actions#types-of-actions
+  using: "composite"
+  steps:
+  - name: "Setup Bower"
+    if: ${{ inputs.bower-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      BOWER_VERSION: ${{ inputs.bower-version }}
+    continue-on-error: true
+    run: |
+      [ -z "$BOWER_VERSION" ] && BOWER_VERSION="latest"
+      npm install -g bower@$BOWER_VERSION
+  - name: "Setup Buildozer"
+    if: ${{ inputs.buildozer-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      BUILDOZER_VERSION: ${{ inputs.buildozer-version }}
+    continue-on-error: true
+    run: |
+      [ -z "$BUILDOZER_VERSION" ] && BUILDOZER_VERSION="latest"
+      go install github.com/bazelbuild/buildtools/buildozer@$BUILDOZER_VERSION
+      echo "$HOME/go/bin" >> "$GITHUB_PATH"
+  - name: "Setup CocoaPods"
+    if: ${{ inputs.cocoapods-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      COCOAPODS_VERSION: ${{ inputs.cocoapods-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$COCOAPODS_VERSION" ]; then
+        sudo gem install cocoapods
+      else
+        sudo gem install cocoapods -v $COCOAPODS_VERSION
+      fi
+  - name: "Setup Conan"
+    if: ${{ inputs.conan-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      CONAN_VERSION: ${{ inputs.conan-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$CONAN_VERSION" -o "$CONAN_VERSION" = "latest" ]; then
+        pipx install conan
+      else
+        pipx install conan==$CONAN_VERSION
+      fi
+  - name: "Setup Gleam"
+    if: ${{ inputs.gleam-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      GLEAM_VERSION: ${{ inputs.gleam-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$GLEAM_VERSION" -o "$GLEAM_VERSION" = "latest" ]; then
+        GLEAM_VERSION=$(curl -sI https://github.com/gleam-lang/gleam/releases/latest \
+          | grep -i "location:" | sed "s,.*/tag/,," | tr -d "\r\n")
+      fi
+
+      if [ -z "$GLEAM_VERSION" ]; then
+        echo "::error::The Gleam version must not be empty."
+        exit 1
+      fi
+
+      GLEAM_HOME=$RUNNER_TOOL_CACHE/gleam/$GLEAM_VERSION
+
+      if [ ! -d "$GLEAM_HOME" ]; then
+        mkdir -p "$GLEAM_HOME"
+        echo "::notice::Setting up Gleam version $GLEAM_VERSION in '$GLEAM_HOME'..."
+
+        curl -sL https://github.com/gleam-lang/gleam/releases/download/$GLEAM_VERSION/gleam-$GLEAM_VERSION-$(arch)-unknown-linux-musl.tar.gz \
+          | tar -xz -C "$GLEAM_HOME"
+      else
+        echo "::notice::Gleam version $GLEAM_VERSION was already set up in '$GLEAM_HOME'."
+      fi
+
+      echo "$GLEAM_HOME" >> "$GITHUB_PATH"
+  - name: "Setup Pipenv"
+    if: ${{ inputs.pipenv-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      PIPENV_VERSION: ${{ inputs.pipenv-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$PIPENV_VERSION" -o "$PIPENV_VERSION" = "latest" ]; then
+        pipx install pipenv
+      else
+        pipx install pipenv==$PIPENV_VERSION
+      fi
+  - name: "Setup PNPM"
+    if: ${{ inputs.pnpm-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      PNPM_VERSION: ${{ inputs.pnpm-version }}
+    continue-on-error: true
+    run: |
+      [ -z "$PNPM_VERSION" ] && PNPM_VERSION="latest"
+      npm install -g pnpm@$PNPM_VERSION
+  - name: "Setup Poetry"
+    if: ${{ inputs.poetry-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      POETRY_VERSION: ${{ inputs.poetry-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$POETRY_VERSION" -o "$POETRY_VERSION" = "latest" ]; then
+        pipx install poetry
+      else
+        pipx install poetry==$POETRY_VERSION
+      fi
+  - name: "Setup python-inspector"
+    if: ${{ inputs.python-inspector-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      PYTHON_INSPECTOR_VERSION: ${{ inputs.python-inspector-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$PYTHON_INSPECTOR_VERSION" -o "$PYTHON_INSPECTOR_VERSION" = "latest" ]; then
+        pipx install python-inspector
+      else
+        pipx install python-inspector==$PYTHON_INSPECTOR_VERSION
+      fi
+  - name: "Setup SBT"
+    if: ${{ inputs.sbt-version != 'none' }}
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstepsshell
+    shell: "bash"
+    env:
+      SBT_VERSION: ${{ inputs.sbt-version }}
+    continue-on-error: true
+    run: |
+      if [ -z "$SBT_VERSION" -o "$SBT_VERSION" = "latest" ]; then
+        SBT_VERSION=$(curl -sI https://github.com/sbt/sbt/releases/latest \
+          | grep -i "location:" | sed "s,.*/tag/,," | tr -d "\r\n")
+      fi
+
+      if [ -z "$SBT_VERSION" ]; then
+        echo "::error::The SBT version must not be empty."
+        exit 1
+      fi
+
+      SBT_HOME=$RUNNER_TOOL_CACHE/sbt/$SBT_VERSION
+
+      if [ ! -d "$SBT_HOME" ]; then
+        mkdir -p "$SBT_HOME"
+        echo "::notice::Setting up SBT version $SBT_VERSION in '$SBT_HOME'..."
+
+        curl -sL https://github.com/sbt/sbt/releases/download/$SBT_VERSION/sbt-${SBT_VERSION#v}.tgz \
+          | tar -xz -C "$SBT_HOME" --strip-components=1
+      else
+        echo "::notice::SBT version $SBT_VERSION was already set up in '$SBT_HOME'."
+      fi
+
+      echo "$SBT_HOME/bin" >> "$GITHUB_PATH"
+  - name: "Check SBT version"
+    shell: bash
+    run: sbt --version
